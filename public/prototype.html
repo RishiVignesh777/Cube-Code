@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cube Code - Standalone 3x3 Logic Prototype</title>
+  <style>
+    :root {
+      --bg: #0F172A;
+      --card: #1E293B;
+      --border: #334155;
+      --blue: #2563EB;
+      --green: #10B981;
+      --amber: #F59E0B;
+      --slate: #64748B;
+      --rose: #E11D48;
+      --text: #F8FAFC;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .header { text-align: center; margin-bottom: 12px; }
+    .header h1 { font-size: 24px; font-weight: 900; letter-spacing: 2px; }
+    .header p { font-size: 12px; color: #94A3B8; margin-top: 4px; }
+    
+    .hud {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 340px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 16px;
+      margin-bottom: 16px;
+    }
+    .hud-stat { font-size: 11px; text-transform: uppercase; color: #94A3B8; font-weight: bold; }
+    .hud-val { font-size: 18px; font-weight: bold; font-family: monospace; color: #FFF; }
+    
+    .target-box {
+      display: grid;
+      grid-template-columns: repeat(3, 16px);
+      gap: 3px;
+      background: #0B1120;
+      padding: 4px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+    .target-cell { width: 16px; height: 16px; border-radius: 3px; }
+    
+    .board-container {
+      position: relative;
+      width: 340px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .row-controls, .col-controls {
+      display: flex;
+      justify-content: space-between;
+    }
+    .col-controls { width: 240px; margin: 6px 0; }
+    .grid-row-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      justify-content: center;
+    }
+    .row-btn-col {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 32px;
+    }
+    
+    .btn-shift {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: #94A3B8;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      transition: all 0.15s;
+    }
+    .btn-shift:hover { background: #334155; color: #FFF; }
+    .col-controls .btn-shift { width: 68px; height: 32px; }
+    .row-btn-col .btn-shift { width: 32px; height: 68px; }
+    
+    .grid {
+      width: 240px;
+      height: 240px;
+      background: #0B1120;
+      border: 2px solid var(--border);
+      border-radius: 16px;
+      padding: 8px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 8px;
+      touch-action: none;
+    }
+    .tile {
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: bold;
+      color: #FFF;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+      cursor: grab;
+      transition: transform 0.15s;
+    }
+    .tile:active { transform: scale(0.95); }
+    
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 18px;
+      width: 340px;
+    }
+    .action-btn {
+      flex: 1;
+      padding: 10px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: #FFF;
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .action-btn.hint { background: #F59E0B; color: #000; border-color: #F59E0B; }
+    .action-btn:hover { opacity: 0.9; }
+    
+    .banner {
+      margin-top: 12px;
+      font-size: 13px;
+      font-weight: bold;
+      color: #10B981;
+      min-height: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>CUBE CODE</h1>
+    <p>Slide circular rows & columns to match the target</p>
+  </div>
+
+  <div class="hud">
+    <div>
+      <div class="hud-stat">Moves</div>
+      <div class="hud-val" id="moves">0</div>
+    </div>
+    <div style="text-align: center;">
+      <div class="hud-stat">Target Goal</div>
+      <div class="target-box" id="target-box"></div>
+    </div>
+    <div style="text-align: right;">
+      <div class="hud-stat">Par</div>
+      <div class="hud-val">2</div>
+    </div>
+  </div>
+
+  <div class="board-container">
+    <div class="col-controls">
+      <button class="btn-shift" onclick="shiftCol(0, 'up')">▲</button>
+      <button class="btn-shift" onclick="shiftCol(1, 'up')">▲</button>
+      <button class="btn-shift" onclick="shiftCol(2, 'up')">▲</button>
+    </div>
+
+    <div class="grid-row-wrap">
+      <div class="row-btn-col">
+        <button class="btn-shift" onclick="shiftRow(0, 'left')">◀</button>
+        <button class="btn-shift" onclick="shiftRow(1, 'left')">◀</button>
+        <button class="btn-shift" onclick="shiftRow(2, 'left')">◀</button>
+      </div>
+
+      <div class="grid" id="grid"></div>
+
+      <div class="row-btn-col">
+        <button class="btn-shift" onclick="shiftRow(0, 'right')">▶</button>
+        <button class="btn-shift" onclick="shiftRow(1, 'right')">▶</button>
+        <button class="btn-shift" onclick="shiftRow(2, 'right')">▶</button>
+      </div>
+    </div>
+
+    <div class="col-controls">
+      <button class="btn-shift" onclick="shiftCol(0, 'down')">▼</button>
+      <button class="btn-shift" onclick="shiftCol(1, 'down')">▼</button>
+      <button class="btn-shift" onclick="shiftCol(2, 'down')">▼</button>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="action-btn hint" onclick="requestHint()">Hint</button>
+    <button class="action-btn" onclick="undo()">Undo</button>
+    <button class="action-btn" onclick="reset()">Reset</button>
+  </div>
+
+  <div class="banner" id="banner"></div>
+
+  <script>
+    const COLORS = {
+      b: '#2563EB',
+      g: '#10B981',
+      a: '#F59E0B'
+    };
+
+    const TARGET = [
+      ['b', 'b', 'b'],
+      ['g', 'g', 'g'],
+      ['a', 'a', 'a']
+    ];
+
+    let current = [
+      ['b', 'b', 'b'],
+      ['g', 'g', 'g'],
+      ['a', 'a', 'a']
+    ];
+
+    let history = [];
+    let moves = 0;
+
+    function init() {
+      shiftRow(0, 'right', false);
+      shiftCol(1, 'down', false);
+      history = [];
+      moves = 0;
+      updateHud();
+      render();
+      renderTarget();
+    }
+
+    function renderTarget() {
+      const el = document.getElementById('target-box');
+      el.innerHTML = '';
+      for (let r=0; r<3; r++) {
+        for (let c=0; c<3; c++) {
+          const d = document.createElement('div');
+          d.className = 'target-cell';
+          d.style.backgroundColor = COLORS[TARGET[r][c]];
+          el.appendChild(d);
+        }
+      }
+    }
+
+    function render() {
+      const g = document.getElementById('grid');
+      g.innerHTML = '';
+      for (let r=0; r<3; r++) {
+        for (let c=0; c<3; c++) {
+          const d = document.createElement('div');
+          d.className = 'tile';
+          d.style.backgroundColor = COLORS[current[r][c]];
+          g.appendChild(d);
+        }
+      }
+      checkWin();
+    }
+
+    function updateHud() {
+      document.getElementById('moves').textContent = moves;
+    }
+
+    function shiftRow(r, dir, countMove = true) {
+      if (countMove) {
+        history.push(JSON.parse(JSON.stringify(current)));
+        moves++;
+        updateHud();
+      }
+      const row = current[r];
+      if (dir === 'left') {
+        const first = row[0];
+        row[0] = row[1]; row[1] = row[2]; row[2] = first;
+      } else {
+        const last = row[2];
+        row[2] = row[1]; row[1] = row[0]; row[0] = last;
+      }
+      render();
+    }
+
+    function shiftCol(c, dir, countMove = true) {
+      if (countMove) {
+        history.push(JSON.parse(JSON.stringify(current)));
+        moves++;
+        updateHud();
+      }
+      if (dir === 'up') {
+        const first = current[0][c];
+        current[0][c] = current[1][c];
+        current[1][c] = current[2][c];
+        current[2][c] = first;
+      } else {
+        const last = current[2][c];
+        current[2][c] = current[1][c];
+        current[1][c] = current[0][c];
+        current[0][c] = last;
+      }
+      render();
+    }
+
+    function undo() {
+      if (history.length === 0) return;
+      current = history.pop();
+      moves--;
+      updateHud();
+      render();
+    }
+
+    function reset() {
+      init();
+    }
+
+    function checkWin() {
+      let won = true;
+      for (let r=0; r<3; r++) {
+        for (let c=0; c<3; c++) {
+          if (current[r][c] !== TARGET[r][c]) won = false;
+        }
+      }
+      const banner = document.getElementById('banner');
+      if (won && moves > 0) {
+        banner.textContent = '🎉 Goal Matched! Perfect Toroidal Solve!';
+      } else {
+        banner.textContent = '';
+      }
+    }
+
+    function requestHint() {
+      alert("Optimal move: Shift Col 2 Up or Row 1 Left!");
+    }
+
+    init();
+  </script>
+</body>
+</html>

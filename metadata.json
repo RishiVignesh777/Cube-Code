@@ -1,0 +1,6 @@
+{
+  "name": "Cube Code - 3x3 Spatial Grid Puzzle",
+  "description": "Minimalist spatial grid puzzle game where you rotate and slide circular rows and columns to match target patterns, sequence numbers, and satisfy logic constraints.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
